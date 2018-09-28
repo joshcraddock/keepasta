@@ -1,0 +1,113 @@
+#!/usr/bin/env /usr/bin/bash
+# Start Keypass and copies the database password to the clipboard
+# Written for BaSH v4.4.23 and tested in VT200 TTY
+
+# Sets BASH and ZSH term PS color normal
+ echo -n -e "\e[93m";
+
+# STDOUT console 
+echo "Keepasta SA startup...";
+
+ok=`echo -e -n "\e[92m[OK] " ; echo -e -n "\e[0m"  ; sleep 0.5s`;
+nok=`echo -e -n "\e[5m[WARN] " ; echo -n -e "\e[0m" ; sleep 0.5s`;
+
+# Better make sure xclip is a thing here:
+
+if [ -f /usr/bin/xclip ]
+then
+     echo -n $ok;
+     echo "xclip package detected...";
+else
+   echo -n $nok;
+   echo "/usr/bin/xclip not detected.. attempting to resolve continue";
+   apt-get -q -y install xclip > /dev/null 2> /dev/null;
+   yum install xclip -yq > /dev/null 2> /dev/null;
+  echo -n "Gave it a shot!";
+fi
+
+# Better make sure the password file exists, too
+
+# Green
+echo -n -e "\e[32m";
+
+if [ -f ~/.kpp ]
+then
+     echo -n $ok;
+     echo "Password file exists....";
+   # reescure perms
+     chmod 644 ~/.kpp;
+else
+   echo -n $nok;
+   echo "-----------------------------------------";
+   echo "Password file not present...";
+   echo -e "\e[0m";
+   echo "recreating template, echo is OFF...";
+   echo "Enter the keypass master password: ";
+  # enter night mode
+   echo -e -n "\e[30m";
+   read pw;
+   echo "------------------------------------------";
+  # exit night mode
+   echo -e "\e[0m";
+   echo $pw > ~/.kpp;
+  # Nedry function active
+  # To avoid memory or page file forensics the var is cleared...
+    pw="You didnt say the magic word!";
+
+# Weve got Dogson here!! Nobody cares... 
+   # re-secure perms
+    chmod 644 ~/.kpp;
+    echo -n $ok;
+    echo "password file written.. starting up";
+    sleep 0.5s;
+fi
+
+# Setting job control on
+set -m
+
+# Lock and load that clipboard with some passwords
+  cat ~/.kpp | xclip -i -rmlastnl -selection clipboard;
+  cat ~/.kpp | xclip -i -rmlastnl -selection primary;
+  cat ~/.kpp | xclip -i -rmlastnl -selection secondary;
+
+echo -n $ok;
+echo "clipboard populated with db password for 30 seconds..";
+
+# Clipboard is loaded!
+  
+ sleep 0.2s;
+
+# Now back to the good part!
+ 
+/usr/bin/keepassxc --keyfile ~/installs/KeePass/SA_KeePass.kdbx --pw-stdin  > /dev/null 2> /dev/null &
+
+# Keypass should now be running and attatched to the getty
+# Comment out the following line if you don't want it to be a child of init 1
+ disown;
+
+
+# Done, keypass should be running and you should be in business
+ echo -n $ok;
+ echo -n -e "            clipboard resets in 30 seconds";
+ echo -e "\e[93m"
+  echo "-----------------------------------------------------------";
+  echo "";
+  echo -e "[ED209] YOU HAVE 30 SECONDS TO COMPLY";
+
+# Countdown some integer... slowly
+secs=$((5 * 5))
+while [ $secs -gt 0 ]; do
+   echo -ne "$secs\033[0K\r"
+   sleep 1
+   : $((secs--))
+done
+
+# Lock and load that clipboard with a pizzy
+  echo "" | xclip -i -rmlastnl -selection clipboard;
+  echo "" | xclip -i -rmlastnl -selection primary;
+  echo "" | xclip -i -rmlastnl -selection secondary;
+
+echo -e "\e[39m";
+echo $ok
+echo -n "[DONE] Clipboard cleared and keypass running or forked.";
+echo -e "\e[39m";
